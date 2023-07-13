@@ -1,0 +1,14 @@
+{
+  "name": "bitcoin-price-tracker",
+  "version": "0.1.0",
+  "description": "A microservice that allows to get the current price of Bitcoin based on Binance API.",
+  "main": "dist/index.js",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/plush-mesh/bitcoin-price-tracker.git"
+  },
+  "author": "Artyom Nesterenko",
+  "license": "MIT"
+}
