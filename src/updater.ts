@@ -1,16 +1,17 @@
 import { BinanceAPI } from "./binance.js";
 import { cache } from "./cache.js";
+import { config } from "./config.js";
 
 const updateBitcoinPrice = async (): Promise<void> => {
   const response = await BinanceAPI.getBitcoinPrice();
-
-  console.debug("price update");
 
   await cache.set("bitcoinPrice", response);
 };
 
 const startUpdater = () => {
-  setInterval(() => updateBitcoinPrice(), 10 * 1000);
+  setInterval(() => {
+    return updateBitcoinPrice();
+  }, config.updateFrequency * 1000);
 
   updateBitcoinPrice();
 };

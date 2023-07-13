@@ -4,16 +4,17 @@ import { USD } from "@dinero.js/currencies";
 
 import { BinanceAPI } from "./binance.js";
 import { cache } from "./cache.js";
+import { config } from "./config.js";
 import { startUpdater } from "./updater.js";
 
 interface MidPrice {
   bidPrice: string;
-  bidPriceComission: string;
+  bidPriceCommission: string;
   totalBidPrice: string;
   askPrice: string;
-  askPriceComission: string;
+  askPriceCommission: string;
   totalAskPrice: string;
-  comission: string;
+  commission: string;
   midPrice: string;
 }
 
@@ -26,16 +27,16 @@ const createDinero = (amount: string): Dinero<number> => {
   return dinero({ amount: priceAmount, currency: USD });
 };
 
-const calculateComission = (price: Dinero<number>): Dinero<number> => {
-  const comission = multiply(price, { amount: 1, scale: 2 });
-  return comission;
+const calculateCommission = (price: Dinero<number>): Dinero<number> => {
+  const commission = config.serviceCommission * 100;
+  return multiply(price, { amount: commission, scale: 2 });
 };
 
 const calculateTotal = (
   price: Dinero<number>,
-  comission: Dinero<number>,
+  commission: Dinero<number>,
 ): Dinero<number> => {
-  return add(price, comission);
+  return add(price, commission);
 };
 
 const calculateMidPrice = (
@@ -48,27 +49,28 @@ const calculateMidPrice = (
 
 const setupRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/price", async (): Promise<MidPrice> => {
-    const key = "bitcoinPrice";
-    const response = await cache.wrap(key, () => BinanceAPI.getBitcoinPrice());
+    const response = await cache.wrap("bitcoinPrice", () => {
+      return BinanceAPI.getBitcoinPrice();
+    });
 
     const bidPrice = createDinero(response.bidPrice);
-    const bidPriceComission = calculateComission(bidPrice);
-    const totalBidPrice = calculateTotal(bidPrice, bidPriceComission);
+    const bidPriceCommission = calculateCommission(bidPrice);
+    const totalBidPrice = calculateTotal(bidPrice, bidPriceCommission);
 
     const askPrice = createDinero(response.askPrice);
-    const askPriceComission = calculateComission(askPrice);
-    const totalAskPrice = calculateTotal(askPrice, askPriceComission);
+    const askPriceCommission = calculateCommission(askPrice);
+    const totalAskPrice = calculateTotal(askPrice, askPriceCommission);
 
     const midPrice = calculateMidPrice(totalBidPrice, totalAskPrice);
 
     return {
       bidPrice: toDecimal(bidPrice),
-      bidPriceComission: toDecimal(bidPriceComission),
+      bidPriceCommission: toDecimal(bidPriceCommission),
       totalBidPrice: toDecimal(totalBidPrice),
       askPrice: toDecimal(askPrice),
-      askPriceComission: toDecimal(askPriceComission),
+      askPriceCommission: toDecimal(askPriceCommission),
       totalAskPrice: toDecimal(totalAskPrice),
-      comission: "0.01",
+      commission: String(config.serviceCommission),
       midPrice: toDecimal(midPrice),
     };
   });

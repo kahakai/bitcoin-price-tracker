@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 
+import { config } from "./config.js";
 import { setupRoutes } from "./routes.js";
 
 const fastify = Fastify({
@@ -10,7 +11,7 @@ fastify.register(setupRoutes);
 
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000 });
+    await fastify.listen({ port: config.port });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
