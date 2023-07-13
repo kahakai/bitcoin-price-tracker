@@ -1,17 +1,10 @@
 import { FastifyPluginAsync } from "fastify";
-import got from "got";
 import { type Dinero, dinero, multiply, add, toDecimal } from "dinero.js";
 import { USD } from "@dinero.js/currencies";
 
+import { BinanceAPI } from "./binance.js";
 import { cache } from "./cache.js";
-
-interface SymbolPrice {
-  symbol: string;
-  bidPrice: string;
-  bidQty: string;
-  askPrice: string;
-  askQty: string;
-}
+import { startUpdater } from "./updater.js";
 
 interface MidPrice {
   bidPrice: string;
@@ -23,16 +16,6 @@ interface MidPrice {
   comission: string;
   midPrice: string;
 }
-
-const getBitcoinPrice = async (): Promise<SymbolPrice> => {
-  const url = "https://www.binance.com/api/v3/ticker/bookTicker";
-
-  return got(url, {
-    searchParams: {
-      symbol: "BTCUSDT",
-    },
-  }).json<SymbolPrice>();
-};
 
 const createDinero = (amount: string): Dinero<number> => {
   const { base, exponent } = USD;
@@ -66,7 +49,7 @@ const calculateMidPrice = (
 const setupRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/price", async (): Promise<MidPrice> => {
     const key = "bitcoinPrice";
-    const response = await cache.wrap(key, () => getBitcoinPrice());
+    const response = await cache.wrap(key, () => BinanceAPI.getBitcoinPrice());
 
     const bidPrice = createDinero(response.bidPrice);
     const bidPriceComission = calculateComission(bidPrice);
@@ -89,6 +72,8 @@ const setupRoutes: FastifyPluginAsync = async (fastify) => {
       midPrice: toDecimal(midPrice),
     };
   });
+
+  startUpdater();
 };
 
 export { setupRoutes };
