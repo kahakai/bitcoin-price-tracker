@@ -1,7 +1,9 @@
 import { FastifyPluginAsync } from "fastify";
 import got from "got";
-import { type Dinero, dinero, multiply, add, toDecimal } from 'dinero.js';
-import { USD } from '@dinero.js/currencies';
+import { type Dinero, dinero, multiply, add, toDecimal } from "dinero.js";
+import { USD } from "@dinero.js/currencies";
+
+import { cache } from "./cache.js";
 
 interface SymbolPrice {
   symbol: string;
@@ -22,6 +24,16 @@ interface MidPrice {
   midPrice: string;
 }
 
+const getBitcoinPrice = async (): Promise<SymbolPrice> => {
+  const url = "https://www.binance.com/api/v3/ticker/bookTicker";
+
+  return got(url, {
+    searchParams: {
+      symbol: "BTCUSDT",
+    },
+  }).json<SymbolPrice>();
+};
+
 const createDinero = (amount: string): Dinero<number> => {
   const { base, exponent } = USD;
   const multiplier = (base as number) ** exponent;
@@ -36,24 +48,25 @@ const calculateComission = (price: Dinero<number>): Dinero<number> => {
   return comission;
 };
 
-const calculateTotal = (price: Dinero<number>, comission: Dinero<number>): Dinero<number> => {
+const calculateTotal = (
+  price: Dinero<number>,
+  comission: Dinero<number>,
+): Dinero<number> => {
   return add(price, comission);
 };
 
-const calculateMidPrice = (bidPrice: Dinero<number>, askPrice: Dinero<number>): Dinero<number> => {
+const calculateMidPrice = (
+  bidPrice: Dinero<number>,
+  askPrice: Dinero<number>,
+): Dinero<number> => {
   const sum = add(bidPrice, askPrice);
   return multiply(sum, { amount: 5, scale: 1 });
-}
+};
 
 const setupRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/price", async (): Promise<MidPrice> => {
-    const url = "https://www.binance.com/api/v3/ticker/bookTicker";
-
-    const response = await got(url, {
-      searchParams: {
-        symbol: "BTCUSDT",
-      },
-    }).json<SymbolPrice>();
+    const key = "bitcoinPrice";
+    const response = await cache.wrap(key, () => getBitcoinPrice());
 
     const bidPrice = createDinero(response.bidPrice);
     const bidPriceComission = calculateComission(bidPrice);
