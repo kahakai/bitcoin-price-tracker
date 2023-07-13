@@ -1,7 +1,8 @@
 import { caching } from "cache-manager";
+import { config } from "./config.js";
 
 const cache = await caching("memory", {
-  ttl: 1 * 60 * 1000,
+  ttl: config.updateFrequency * 30 * 1000,
   max: 500,
 });
 
